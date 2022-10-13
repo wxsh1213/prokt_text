@@ -1,2 +1,5 @@
 glue_data/
 checkpoints/
+runs/
+*/__pycache__*
+# __pycache__/

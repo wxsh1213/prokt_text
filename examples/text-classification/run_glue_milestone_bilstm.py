@@ -134,8 +134,12 @@ class KDDualCriterion(object):
 
 
 def init_classifier_as_zero(model):
-    for params in model.classifier.parameters():
-        params.data.fill_(0.0)
+    try:
+        for params in model.classifier.parameters():
+            params.data.fill_(0.0)
+    except Exception as e:
+        for params in model.module.classifier.parameters():
+            params.data.fill_(0.0)
 
 
 class loss_record():
@@ -288,14 +292,12 @@ def train(trainer_student, trainer_teacher, model_path_student, model_path_teach
             inputs_student = {}
             for key, value in inputs.items():
                 if value.dim() > 2:
+                    # print(key, value.size())
                     inputs_teacher[key] = value[:, -1]
                     inputs_student[key] = value[:, :-1]
                 else:
                     inputs_teacher[key] = value
                     inputs_student[key] = value
-            # print(inputs_student)
-            # print(inputs_teacher)
-            # exit()
 
             if trainer_student.args.train_teacher:
                 model_t.train()
@@ -458,7 +460,6 @@ def main():
     # The .from_pretrained methods guarantee that only one local process can concurrently
     # download model & vocab.
 
-    # TODO: model_args.model_name_or_path
     print(model_args.model_name_or_path)
     # split model_name_or_path into teacher / student models.
     try:
@@ -473,7 +474,6 @@ def main():
         finetuning_task=data_args.task_name,
         cache_dir=model_args.cache_dir,
     )
-    # TODO: tokenizer应该是同一个。。
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else teacher_model_name_or_path,
         cache_dir=model_args.cache_dir,
@@ -509,23 +509,13 @@ def main():
                 )
     else:
         logger.info("Training new model from scratch")
-        model_student = AutoModelForSequenceClassification.from_config(config_student)  # TODO: training student model from scratch
+        model_student = AutoModelForSequenceClassification.from_config(config_student)  # training student model from scratch
+    # print(config_student)
     print(model_student)
 
-    # tokenizer_student = AutoTokenizer.from_pretrained(
-    #     model_args.tokenizer_name if model_args.tokenizer_name else student_model_name_or_path,
-    #     cache_dir=model_args.cache_dir,
-    # )
-    # model_student = AutoModelForSequenceClassification.from_pretrained(
-    #     student_model_name_or_path,
-    #     from_tf=bool(".ckpt" in student_model_name_or_path),
-    #     config=config_student,
-    #     cache_dir=model_args.cache_dir,
-    # )
     if training_args.share_teacher_student_embedding:
         word_embedding_teacher = model_teacher.get_input_embeddings()
         model_student.set_input_embeddings_weight(word_embedding_teacher.weight.data)
-
 
     # Get datasets
     data_args.comb_pair = True
@@ -551,7 +541,6 @@ def main():
         return glue_compute_metrics(data_args.task_name, preds, p.label_ids)
 
     # Initialize our Trainer
-    # TODO: 对于student和teacher构建两个不同的trainer
     trainer_student = Trainer(
         model=model_student,
         args=training_args,
@@ -574,15 +563,8 @@ def main():
     # Training
     trainer = trainer_student
     if training_args.do_train:
-        # TODO: 这里把training的步骤从trainer里面拆出来。
-
         _, train_record_teacher, train_record_student = \
             train(trainer_student, trainer_teacher, student_model_name_or_path, teacher_model_name_or_path)
-
-        # trainer.train(
-        #     model_path=model_args.model_name_or_path if os.path.isdir(model_args.model_name_or_path) else None
-        # )
-
 
         trainer.save_model()
         # For convenience, we also re-save the tokenizer to the same directory,

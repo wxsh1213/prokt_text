@@ -89,7 +89,7 @@ class biLSTMConfig(PretrainedConfig):
         vocab_size=30522,
         embedding_size=300,  # TODO: 1024
         hidden_size=300,  # TODO: 300/150 768
-        num_hidden_layers=1,
+        lstm_num_hidden_layers=1,
         num_attention_heads=12,
         intermediate_size=3072,
         hidden_act="gelu",
@@ -107,7 +107,7 @@ class biLSTMConfig(PretrainedConfig):
         self.vocab_size = vocab_size
         self.embedding_size = embedding_size
         self.hidden_size = hidden_size
-        self.num_hidden_layers = num_hidden_layers
+        self.num_hidden_layers = lstm_num_hidden_layers
         # self.num_attention_heads = num_attention_heads
         self.hidden_act = hidden_act
         # self.intermediate_size = intermediate_size

@@ -44,7 +44,6 @@ from transformers import (
 from transformers.trainer_utils import PREFIX_CHECKPOINT_DIR
 
 
-
 # if is_tpu_available():
 #     import torch_xla.core.xla_model as xm
 #     import torch_xla.debug.metrics as met
@@ -179,7 +178,6 @@ class softLossCriterion(nn.Module):
             mapped_emb_of_student = self.emb_w(emb_of_student)
             emb_loss = self.mse_hid(input=mapped_emb_of_student, target=emb_of_teacher.detach())
             loss += emb_loss
-            # print(emb_loss)
         if self.use_attn:
             attentions_of_student = outputs[3]  # Batch_size x head x seq_len x seq_len
             attentions_of_teacher = teacher_outputs[3]
@@ -194,12 +192,9 @@ class softLossCriterion(nn.Module):
             attentions_of_teacher = torch.cat(attentions_of_teacher, dim=1)
             attentions_of_teacher = attentions_of_teacher.view(-1, attentions_of_teacher.size(-1))
 
-            # print(attentions_of_student)
-            # print(torch.sum(attentions_of_student, dim=-1))
             attn_loss = self.loss_attn(input=attentions_of_student, target=attentions_of_teacher.detach())
 
             loss += attn_loss
-            # print(attn_loss)
 
         return loss
 
@@ -529,7 +524,6 @@ def main():
         cache_dir=model_args.cache_dir,
     )
 
-    # TODO: tokenizer应该是同一个。。
     tokenizer = AutoTokenizer.from_pretrained(
         model_args.tokenizer_name if model_args.tokenizer_name else teacher_model_name_or_path,
         cache_dir=model_args.cache_dir,
@@ -584,7 +578,6 @@ def main():
         return glue_compute_metrics(data_args.task_name, preds, p.label_ids)
 
     # Initialize our Trainer
-    # TODO: 对于student和teacher构建两个不同的trainer
     trainer_student = Trainer(
         model=model_student,
         args=training_args,
@@ -607,15 +600,8 @@ def main():
     # Training
     trainer = trainer_student
     if training_args.do_train:
-        # TODO: 这里把training的步骤从trainer里面拆出来。
-
         _, train_record_teacher, train_record_student = \
             train(trainer_student, trainer_teacher, student_model_name_or_path, teacher_model_name_or_path)
-
-        # trainer.train(
-        #     model_path=model_args.model_name_or_path if os.path.isdir(model_args.model_name_or_path) else None
-        # )
-
 
         trainer.save_model()
         # For convenience, we also re-save the tokenizer to the same directory,
